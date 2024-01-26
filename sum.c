@@ -3,8 +3,9 @@
  *
  * CS 470 Project 1 (Pthreads)
  * Serial version
- *
+ * 
  * Compile with --std=c99
+ * Alberto Jimenez, Aaron Nyaanga
  */
 
 #include <limits.h>

@@ -3,9 +3,8 @@
  *
  * CS 470 Project 1 (Pthreads)
  * Serial version
- * 
+ *
  * Compile with --std=c99
- * Alberto Jimenez, Aaron Nyaanga
  */
 
 #include <limits.h>
@@ -13,7 +12,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <pthread.h>
 
 // aggregate variables
 long sum = 0;
@@ -22,35 +20,8 @@ long min = INT_MAX;
 long max = INT_MIN;
 bool done = false;
 
-// Task queue structure
-typedef struct {
-    char action;
-    long number;
-} Task;
-
-typedef struct Node {
-    Task task;
-    struct Node* next;
-} Node;
-
-typedef struct {
-    Node* front;
-    Node* rear;
-    pthread_mutex_t mutex;
-    pthread_cond_t cond;
-} TaskQueue;
-
-TaskQueue taskQueue;
-pthread_mutex_t globalMutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_cond_t globalCond = PTHREAD_COND_INITIALIZER;
-
 // function prototypes
 void update(long number);
-void initializeTaskQueue(TaskQueue* queue);
-void enqueueTask(TaskQueue* queue, Task task);
-Task dequeueTask(TaskQueue* queue);
-void* workerFunction(void* arg);
-void* supervisorFunction(void* arg);
 
 /*
  * update global aggregate variables given a number
@@ -61,7 +32,6 @@ void update(long number)
     sleep(number);
 
     // update aggregate variables
-    pthread_mutex_lock(&globalMutex);
     sum += number;
     if (number % 2 == 1) {
         odd++;
@@ -72,26 +42,12 @@ void update(long number)
     if (number > max) {
         max = number;
     }
-    pthread_mutex_unlock(&globalMutex);
-
 }
-
-/*
- * Initialize the task queue
- */
-void initializeTaskQueue(TaskQueue* queue){
-    queue->front = NULL;
-    queue->rear = NULL;
-    pthread_mutex_init(&queue->mutex, NULL);
-    pthread_cond_init(&queue->cond, NULL);
-}
-
-
 
 int main(int argc, char* argv[])
 {
     // check and parse command line options
-    if (argc != 3) {
+    if (argc != 2) {
         printf("Usage: sum <infile>\n");
         exit(EXIT_FAILURE);
     }

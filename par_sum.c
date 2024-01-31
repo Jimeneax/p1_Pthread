@@ -77,7 +77,7 @@ void update(long number)
 /*
  * Initialize the task queue
  */
-void taskQueue(TaskQueue* queue){
+void initializeTaskQueue(TaskQueue* queue){
     queue->front = NULL;
     queue->rear = NULL;
     pthread_mutex_init(&queue->mutex, NULL);
@@ -100,14 +100,12 @@ void enqueueTask(TaskQueue* queue, Task task){
     }
 
     pthread_cond_signal(&queue->cond);
-
     pthread_mutex_unlock(&queue->mutex);
 }
 
 Task dequeueTask(TaskQueue* queue) {
     
     pthread_mutex_lock(&queue->mutex);
-
 
     // Wait until there is a task in the queue
     while (queue->front == NULL) {
@@ -198,7 +196,7 @@ int main(int argc, char* argv[])
             exit(EXIT_FAILURE);
         }
     }
-    
+
     fclose(fin);
 
     // Wait for all tasks to be processed

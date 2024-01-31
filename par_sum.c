@@ -40,7 +40,6 @@ typedef struct {
     pthread_cond_t cond;
 } TaskQueue;
 
-TaskQueue taskQueue;
 pthread_mutex_t globalMutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t globalCond = PTHREAD_COND_INITIALIZER;
 
@@ -50,7 +49,6 @@ void initializeTaskQueue(TaskQueue* queue);
 void enqueueTask(TaskQueue* queue, Task task);
 Task dequeueTask(TaskQueue* queue);
 void* workerFunction(void* arg);
-void* supervisorFunction(void* arg);
 
 /*
  * update global aggregate variables given a number
@@ -79,14 +77,72 @@ void update(long number)
 /*
  * Initialize the task queue
  */
-void initializeTaskQueue(TaskQueue* queue){
+void taskQueue(TaskQueue* queue){
     queue->front = NULL;
     queue->rear = NULL;
     pthread_mutex_init(&queue->mutex, NULL);
     pthread_cond_init(&queue->cond, NULL);
 }
 
+void enqueueTask(TaskQueue* queue, Task task){
+    Node* newNode = (Node*)malloc(sizeof(Node));
+    newNode->task = task;
+    newNode->next = NULL;
 
+    pthread_mutex_lock(&queue->mutex);
+
+    if (queue->rear == NULL) {
+        queue->front = newNode;
+        queue->rear = newNode;
+    } else {
+        queue->rear->next = newNode;
+        queue->rear = newNode;
+    }
+
+    pthread_cond_signal(&queue->cond);
+
+    pthread_mutex_unlock(&queue->mutex);
+}
+
+Task dequeueTask(TaskQueue* queue) {
+    
+    pthread_mutex_lock(&queue->mutex);
+
+
+    // Wait until there is a task in the queue
+    while (queue->front == NULL) {
+        pthread_cond_wait(&queue->cond, &queue->mutex);
+    }
+
+    Task task = queue->front->task;
+    Node* temp = queue->front;
+
+    if (queue->front == queue->rear) {
+        queue->front = NULL;
+        queue->rear = NULL;
+    } else {
+        queue->front = queue->front->next;
+    }
+
+    free(temp);
+
+    pthread_mutex_unlock(&queue->mutex);
+
+    return task;
+}
+
+// Worker thread function
+void* workerFunction(void* arg){
+    TaskQueue* queue = (TaskQueue*)arg;
+    while (1) {
+        Task task = dequeueTask(queue);
+        if (task.action == 'p'){
+            update(task.number);
+        } else if (task.action == 'w'){
+            sleep(task.number);
+        }
+    }
+}
 
 int main(int argc, char* argv[])
 {
@@ -104,9 +160,27 @@ int main(int argc, char* argv[])
         exit(EXIT_FAILURE);
     }
 
+    // Verify that that number is greater than zero. 
+    int numThread = atoi(argv[2]);
+    if (numThread <= 0) {
+        fprintf(stderr, "Number of threads must be greater than zero.\n");
+        return EXIT_FAILURE;
+    }
+
+    TaskQueue taskQueue;
+    initializeTaskQueue(&taskQueue);
+
+    // Create worker threads
+    pthread_t workerThreads[numThread];
+    for (int i = 0; i < numThread; i++){
+        pthread_create(&workerThreads[i], NULL, workerFunction, &taskQueue);
+    }
+
     // load numbers and add them to the queue
     char action;
     long num;
+    Task* newTask = (Task*)malloc(sizeof(Task));
+
     while (fscanf(fin, "%c %ld\n", &action, &num) == 2) {
 
         // check for invalid action parameters
@@ -124,10 +198,19 @@ int main(int argc, char* argv[])
             exit(EXIT_FAILURE);
         }
     }
+    
     fclose(fin);
+
+    // Wait for all tasks to be processed
+    for (int i = 0; i < numThread; i++){
+        pthread_join(workerThreads[i], NULL);
+    }
 
     // print results
     printf("%ld %ld %ld %ld\n", sum, odd, min, max);
+
+    pthread_mutex_destroy(&taskQueue.mutex);
+    pthread_cond_destroy(&taskQueue.cond);
 
     // clean up and return
     return (EXIT_SUCCESS);

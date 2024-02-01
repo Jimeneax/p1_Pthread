@@ -39,7 +39,7 @@ typedef struct {
     pthread_mutex_t mutex;
     pthread_cond_t cond;
 } TaskQueue;
-
+TaskQueue taskQueue;
 pthread_mutex_t globalMutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t globalCond = PTHREAD_COND_INITIALIZER;
 
@@ -133,84 +133,89 @@ Task dequeueTask(TaskQueue* queue) {
 void* workerFunction(void* arg){
     TaskQueue* queue = (TaskQueue*)arg;
     while (1) {
+        pthread_mutex_lock(&globalMutex);
+        while(taskQueue.front == NULL && !done){
+            pthread_cond_wait(&taskQueue.cond, &globalMutex);
+        }
+        if(taskQueue.front == NULL && done){
+            pthread_mutex_unlock(&globalMutex);
+            pthread_exit(NULL);
+        }
+
         Task task = dequeueTask(queue);
+        pthread_mutex_unlock(&globalMutex);
+
         if (task.action == 'p'){
             update(task.number);
         } else if (task.action == 'w'){
             sleep(task.number);
+        }else{
+            exit(EXIT_FAILURE);
         }
     }
 }
 
 int main(int argc, char* argv[])
 {
-    // check and parse command line options
     if (argc != 3) {
-        printf("Usage: sum <infile>\n");
+        printf("Usage: %s <infile> <num_threads>\n", argv[0]);
         exit(EXIT_FAILURE);
     }
-    char *fn = argv[1];
-
+    char* fn = argv[1];
+    int num_threads = atoi(argv[2]);
+    if (num_threads <= 0) {
+        fprintf(stderr, "Number of threads should be greater than 0.\n");
+        exit(EXIT_FAILURE);
+    }
     // open input file
     FILE* fin = fopen(fn, "r");
     if (!fin) {
-        printf("ERROR: Could not open %s\n", fn);
+        perror("ERROR: Could not open file");
         exit(EXIT_FAILURE);
     }
-
-    // Verify that that number is greater than zero. 
-    int numThread = atoi(argv[2]);
-    if (numThread <= 0) {
-        fprintf(stderr, "Number of threads must be greater than zero.\n");
-        return EXIT_FAILURE;
-    }
-
-    TaskQueue taskQueue;
+    // Initialize task queue
     initializeTaskQueue(&taskQueue);
-
-    // Create worker threads
-    pthread_t workerThreads[numThread];
-    for (int i = 0; i < numThread; i++){
-        pthread_create(&workerThreads[i], NULL, workerFunction, &taskQueue);
-    }
-
-    // load numbers and add them to the queue
+    // Load numbers and add them to the queue
     char action;
     long num;
-    Task* newTask = (Task*)malloc(sizeof(Task));
-
     while (fscanf(fin, "%c %ld\n", &action, &num) == 2) {
-
         // check for invalid action parameters
         if (num < 1) {
-            printf("ERROR: Invalid action parameter: %ld\n", num);
+            fprintf(stderr, "ERROR: Invalid action parameter: %ld\n", num);
             exit(EXIT_FAILURE);
         }
-
-        if (action == 'p') {            // process
-            update(num);
-        } else if (action == 'w') {     // wait
-            sleep(num);
-        } else {
-            printf("ERROR: Unrecognized action: '%c'\n", action);
-            exit(EXIT_FAILURE);
-        }
+        Task task = {action, num};
+        // enqueue the task
+        enqueueTask(&taskQueue, task);
     }
 
     fclose(fin);
 
-    // Wait for all tasks to be processed
-    for (int i = 0; i < numThread; i++){
-        pthread_join(workerThreads[i], NULL);
+  
+
+    // Create worker threads
+    pthread_t worker_threads[num_threads];
+    for (int i = 0; i < num_threads; ++i) {
+        if (pthread_create(&worker_threads[i], NULL, workerFunction, &taskQueue)) {
+            perror("Error creating worker thread");
+            exit(EXIT_FAILURE);
+        }
+    }
+      // Signal workers that there are no more tasks
+pthread_mutex_lock(&globalMutex);
+done = true;
+pthread_cond_broadcast(&taskQueue.cond);
+pthread_mutex_unlock(&globalMutex);
+
+    // Wait for worker threads to finish
+    for (int i = 0; i < num_threads; ++i) {
+        pthread_join(worker_threads[i], NULL);
     }
 
     // print results
     printf("%ld %ld %ld %ld\n", sum, odd, min, max);
 
-    pthread_mutex_destroy(&taskQueue.mutex);
-    pthread_cond_destroy(&taskQueue.cond);
-
     // clean up and return
-    return (EXIT_SUCCESS);
+    return EXIT_SUCCESS;
 }
 

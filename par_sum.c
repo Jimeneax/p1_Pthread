@@ -7,21 +7,28 @@
  * Compile with --std=c99
  * Alberto Jimenez, Aaron Nyaanga
  * 
-•	Did you use an AI-assist tool while constructing your solution? In what ways was it helpful (or not)? 
-	Yes, we use the git hub copilot to help us construct some of our helper methods. We found that even when copilot predicted what we wanted to program we found some mistakes in the code that we had to fix.
+  • Did you use an AI-assist tool while constructing your solution? In what ways was it helpful (or not)? 
+	    Yes, we use the git hub copilot to help us construct some of our helper methods. 
+    We found that even when copilot predicted what we wanted to program we found some 
+    mistakes in the code that we had to fix. So we had to be pay extra attention to what
+    we were programming. 
 
-•	How did you verify that your solution's performance scales linearly with the number of threads? Describe your experiments in detail. 
-	We verify that our solution performance scales linearly with threads when our time decreases, and the threads increase.
+  • How did you verify that your solution's performance scales linearly with the number of threads?
+    Describe your experiments in detail. 
+	    We verify that our solution performance scales linearly with threads when our 
+    time decreases, and the threads increase. We tested the program with multiple small and large files
+    and each time we doubled the threads the time when down in half.
 
-•	How does your solution ensure the worker threads did not terminate until all tasks had entered the system? 
+  • How does your solution ensure the worker threads did not terminate until all tasks had entered the system? 
 	We use a done Boolean variable to ensure that our worker threads do not terminate before all the tasks are done.
 
-•	How does your solution ensure that all of the worker threads are terminated cleanly when the supervisor is done? 
+  • How does your solution ensure that all of the worker threads are terminated cleanly when the supervisor is done? 
+    
 	
-•	Suppose that we wanted a priority-aware task queue. How would this affect your queue implementation, and how would it affect the threading synchronization? 
+  • Suppose that we wanted a priority-aware task queue. How would this affect your queue implementation, and how would it affect the threading synchronization? 
 	If we wanted a priority-aware task queue this would affect the enqueue and dequeue on sorting priority tasks so there would be a slowing initial time.
 
-•	Suppose that we wanted task differentiation (e.g., some tasks can only be handled by some workers). How would this affect your solution? 
+  • Suppose that we wanted task differentiation (e.g., some tasks can only be handled by some workers). How would this affect your solution? 
 	We would have to add a type of task variable that our worker threads would have to sort through to make sure they are doing the right type of tasks. This would affect the solution of the program time because sorting through the task would add time.
 
  */
@@ -32,21 +39,6 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <pthread.h>
-
-volatile long sum = 0;
-volatile long odd = 0;
-volatile long min = INT_MAX;
-volatile long max = INT_MIN;
-volatile bool done = false;
-pthread_mutex_t globalMutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_cond_t globalCond = PTHREAD_COND_INITIALIZER;
-
-// Function prototypes
-void update(long number);
-void initializeTaskQueue(TaskQueue* queue);
-void enqueueTask(TaskQueue* queue, Task task);
-Task dequeueTask(TaskQueue* queue);
-void* workerFunction(void* arg);
 
 // Task queue structure
 typedef struct {
@@ -69,8 +61,23 @@ typedef struct {
 } TaskQueue;
 TaskQueue taskQueue;
 
+volatile long sum = 0;
+volatile long odd = 0;
+volatile long min = INT_MAX;
+volatile long max = INT_MIN;
+volatile bool done = false;
+pthread_mutex_t globalMutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t globalCond = PTHREAD_COND_INITIALIZER;
+
+// Function prototypes
+void update(long number);
+void initializeTaskQueue(TaskQueue* queue);
+void enqueueTask(TaskQueue* queue, Task task);
+Task dequeueTask(TaskQueue* queue);
+void* workerFunction(void* arg);
+
 /*
- * update global aggregate variables given a number
+ * Update global aggregate variables given a number
  */
 void update(long number)
 {
@@ -123,12 +130,12 @@ void enqueueTask(TaskQueue* queue, Task task){
     }
 
     pthread_cond_signal(&queue->cond);
-    // Unlick the queue mutex
+    // Unlock the queue mutex
     pthread_mutex_unlock(&queue->mutex);
 }
 
 /*
- *
+ * Remove task from the queue
  */
 Task dequeueTask(TaskQueue* queue) {
     
@@ -138,7 +145,7 @@ Task dequeueTask(TaskQueue* queue) {
     while (queue->front == NULL) {
         pthread_cond_wait(&queue->cond, &queue->mutex);
     }
-
+    
     Task task = queue->front->task;
     Node* temp = queue->front;
 
@@ -150,7 +157,6 @@ Task dequeueTask(TaskQueue* queue) {
     }
 
     free(temp);
-
     pthread_mutex_unlock(&queue->mutex);
 
     return task;
@@ -163,14 +169,16 @@ void* workerFunction(void* arg){
     TaskQueue* queue = (TaskQueue*)arg;
     while (1) {
         pthread_mutex_lock(&globalMutex);
+        // Wait while task is not done
         while(taskQueue.front == NULL && !done){
             pthread_cond_wait(&taskQueue.cond, &globalMutex);
         }
+        
         if(taskQueue.front == NULL && done){
             pthread_mutex_unlock(&globalMutex);
             pthread_exit(NULL);
         }
-
+        // remove task when doen
         Task task = dequeueTask(queue);
         pthread_mutex_unlock(&globalMutex);
 
@@ -185,7 +193,7 @@ void* workerFunction(void* arg){
 }
 
 /*
- * 
+ * Main method
  */
 int main(int argc, char* argv[])
 {

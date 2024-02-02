@@ -27,10 +27,10 @@
   • How does your solution ensure that all of the worker threads are terminated cleanly
     when the supervisor is done? 
         We ensured that all worker threads are all terminated cleanly by using a Boolean to properly set to false in the beginning of the program. 
-         Then we set it to true when the main thread has finished adding the tasks for the workers to finish.
-         Then the pthread_cond_broadcast is used to tell all the worker threads waiting on taskQueue.cond that they should check the done flag. 
-         Then In the workerFunction worker threads check the done flag while waiting for the tasks and if done == true then it exits.
-         After setting done to true in the main thread we pthread_join to wait for all worker threads to finish.
+    Then we set it to true when the main thread has finished adding the tasks for the workers to finish.
+    Then the pthread_cond_broadcast is used to tell all the worker threads waiting on taskQueue.cond that they should check the done flag. 
+    Then In the workerFunction worker threads check the done flag while waiting for the tasks and if done == true then it exits.
+    After setting done to true in the main thread we pthread_join to wait for all worker threads to finish.
     
 	
   • Suppose that we wanted a priority-aware task queue. How would this affect your queue

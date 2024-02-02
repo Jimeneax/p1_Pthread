@@ -19,17 +19,25 @@
     time decreases, and the threads increase. We tested the program with multiple small and large files
     and each time we doubled the threads the time when down in half.
 
-  • How does your solution ensure the worker threads did not terminate until all tasks had entered the system? 
-	We use a done Boolean variable to ensure that our worker threads do not terminate before all the tasks are done.
+  • How does your solution ensure the worker threads did not terminate until all tasks
+    had entered the system? 
+	    We use a done Boolean variable to ensure that our worker threads do not terminate
+    before all the tasks are done.
 
-  • How does your solution ensure that all of the worker threads are terminated cleanly when the supervisor is done? 
+  • How does your solution ensure that all of the worker threads are terminated cleanly
+    when the supervisor is done? 
     
 	
-  • Suppose that we wanted a priority-aware task queue. How would this affect your queue implementation, and how would it affect the threading synchronization? 
-	If we wanted a priority-aware task queue this would affect the enqueue and dequeue on sorting priority tasks so there would be a slowing initial time.
+  • Suppose that we wanted a priority-aware task queue. How would this affect your queue
+    implementation, and how would it affect the threading synchronization? 
+	    If we wanted a priority-aware task queue this would affect the enqueue and dequeue
+    on sorting priority tasks so there would be a slowing initial time.
 
-  • Suppose that we wanted task differentiation (e.g., some tasks can only be handled by some workers). How would this affect your solution? 
-	We would have to add a type of task variable that our worker threads would have to sort through to make sure they are doing the right type of tasks. This would affect the solution of the program time because sorting through the task would add time.
+  • Suppose that we wanted task differentiation (e.g., some tasks can only be handled by
+    some workers). How would this affect your solution? 
+	    We would have to add a type of task variable that our worker threads would have to
+    sort through to make sure they are doing the right type of tasks. This would affect
+    the solution of the program time because sorting through the task would add time.
 
  */
 

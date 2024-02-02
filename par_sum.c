@@ -20,7 +20,7 @@
 	
 •	Suppose that we wanted a priority-aware task queue. How would this affect your queue implementation, and how would it affect the threading synchronization? 
 	If we wanted a priority-aware task queue this would affect the enqueue and dequeue on sorting priority tasks so there would be a slowing initial time.
-    
+
 •	Suppose that we wanted task differentiation (e.g., some tasks can only be handled by some workers). How would this affect your solution? 
 	We would have to add a type of task variable that our worker threads would have to sort through to make sure they are doing the right type of tasks. This would affect the solution of the program time because sorting through the task would add time.
 
@@ -33,11 +33,11 @@
 #include <unistd.h>
 #include <pthread.h>
 
-long sum = 0;
-long odd = 0;
-long min = INT_MAX;
-long max = INT_MIN;
-bool done = false;
+volatile long sum = 0;
+volatile long odd = 0;
+volatile long min = INT_MAX;
+volatile long max = INT_MIN;
+volatile bool done = false;
 pthread_mutex_t globalMutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t globalCond = PTHREAD_COND_INITIALIZER;
 
